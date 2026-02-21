@@ -7,28 +7,34 @@ export const emailsRouter = Router();
 
 // Fetch and prioritize emails from all connected accounts
 emailsRouter.post('/inbox', async (req, res) => {
-  const { accounts } = req.body; // [{provider:'gmail', tokens:{...}}, ...]
+  const { accounts } = req.body;
 
   try {
     let allEmails = [];
 
     for (const account of accounts) {
-      if (account.provider === 'gmail') {
-        const emails = await fetchGmailEmails(account.tokens);
-        allEmails = allEmails.concat(emails.map(e => ({ ...e, accountEmail: account.email })));
-      } else if (account.provider === 'outlook') {
-        const emails = await fetchOutlookEmails(account.tokens);
-        allEmails = allEmails.concat(emails.map(e => ({ ...e, accountEmail: account.email })));
+      try {
+        if (account.provider === 'gmail') {
+          const emails = await fetchGmailEmails(account.tokens);
+          allEmails = allEmails.concat(emails.map(e => ({ ...e, accountEmail: account.email })));
+        } else if (account.provider === 'outlook') {
+          const emails = await fetchOutlookEmails(account.tokens);
+          allEmails = allEmails.concat(emails.map(e => ({ ...e, accountEmail: account.email })));
+        }
+      } catch (accountErr) {
+        console.error(`Error fetching emails for ${account.email}:`, accountErr.message);
+        return res.status(500).json({ 
+          error: `Gmail API error for ${account.email}: ${accountErr.message}`,
+          emails: []
+        });
       }
     }
 
-    // Sort by date first, then AI-prioritize
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
     const prioritized = await prioritizeEmails(allEmails);
-
     res.json({ emails: prioritized });
   } catch (err) {
-    console.error(err);
+    console.error('Inbox error:', err);
     res.status(500).json({ error: err.message });
   }
 });

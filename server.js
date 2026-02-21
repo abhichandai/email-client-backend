@@ -8,6 +8,7 @@ import { emailsRouter } from './api/emails/index.js';
 dotenv.config();
 
 const app = express();
+
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://app.mailmfer.com',
@@ -16,7 +17,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) callback(null, true);
     else callback(new Error('Not allowed by CORS'));
   },
@@ -26,7 +27,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // handle preflight for all routes
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use('/auth/gmail', gmailAuthRouter);
@@ -35,5 +36,11 @@ app.use('/emails', emailsRouter);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+// Export for Vercel serverless
+export default app;
+
+// Listen for local dev only
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+}
