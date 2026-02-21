@@ -8,7 +8,20 @@ import { emailsRouter } from './api/emails/index.js';
 dotenv.config();
 
 const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://app.mailmfer.com',
+  'https://mailmfer.com',
+  'http://localhost:3000',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+    else callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/auth/gmail', gmailAuthRouter);
